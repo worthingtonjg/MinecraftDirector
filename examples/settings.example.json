@@ -1,0 +1,9 @@
+{
+  "players": [
+    "PlayerOne",
+    "PlayerTwo"
+  ],
+  "lanAddress": "127.0.0.1",
+  "campObjective": "mcd.camp_lantern",
+  "spawnMarker": "camp_lantern_spawn"
+}

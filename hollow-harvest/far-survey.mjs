@@ -1,0 +1,9 @@
+import {existsSync,readFileSync,writeFileSync,renameSync} from 'node:fs';
+export const surveyCenters={east:{x:1440,z:0},west:{x:-1392,z:-592},north:{x:0,z:-496},northeast:{x:224,z:-432},eastnear:{x:496,z:0},northwest:{x:-352,z:-352},south:{x:0,z:496}};
+export function surveyChunks(key){const p=surveyCenters[key];if(!p)throw Error('Unknown fixed survey');const out=[],near=!['east','west'].includes(key),offsets=near?[-32,-16,0,16,32]:[-16,0,16];for(const dx of offsets)for(const dz of offsets)out.push({x:p.x+dx,z:p.z+dz});const fractions=near?Array.from({length:8},(_,i)=>(i+1)/9):[.25,.5,.75];for(const f of fractions)out.push({x:Math.floor(p.x*f/16)*16,z:Math.floor(p.z*f/16)*16});return [...new Map(out.map(v=>[v.x+','+v.z,v])).values()];}
+export class FarSurvey{
+ constructor(execute,file){this.execute=execute;this.file=file;this.owned=existsSync(file)?JSON.parse(readFileSync(file)):[];}
+ save(){writeFileSync(this.file+'.tmp',JSON.stringify(this.owned));renameSync(this.file+'.tmp',this.file);}
+ async load(key){const results=[];for(const p of surveyChunks(key)){const q=await this.execute(`forceload query ${p.x} ${p.z}`);if(q.some(l=>l.includes('not marked for force loading'))){if(!this.owned.some(c=>c.x===p.x&&c.z===p.z)){this.owned.push(p);this.save();}await this.execute(`forceload add ${p.x} ${p.z}`);}else if(!q.some(l=>l.includes('marked for force loading')))throw Error('Survey ticket query uncertain; inspect before retry');results.push(p);}return {loaded:results,owned:this.owned.length};}
+ async release(){for(const p of this.owned.slice(0,12)){await this.execute(`forceload remove ${p.x} ${p.z}`);const q=await this.execute(`forceload query ${p.x} ${p.z}`);if(!q.some(l=>l.includes('not marked for force loading')))throw Error('Survey release unconfirmed');this.owned=this.owned.filter(c=>c.x!==p.x||c.z!==p.z);this.save();}return {remaining:this.owned.length};}
+}

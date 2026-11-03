@@ -1,0 +1,9 @@
+import{readFileSync,writeFileSync,mkdirSync}from'node:fs';import{Terrain}from'./journey-terrain.mjs';import{readNbt}from'./terrain-nbt.mjs';import{encode,byte,int,str,bytes,list,compound}from'./nbt-write.mjs';
+const world='server-26.3/hollow-harvest-opening',dataVersion=readNbt(readFileSync(world+'/level.dat')).Data.DataVersion,previousMapId=readNbt(readFileSync(world+'/data/minecraft/maps/last_id.dat')).data.map;
+const p={x:-7,y:77,z:-199,block:'minecraft:birch_planks',mapId:previousMapId+1,xCenter:0,zCenter:-112,scale:2,rescues:null};
+const t=new Terrain(world+'/dimensions/minecraft/overworld/region'),colors=[];let known=0;
+const color=b=>b==='minecraft:water'?50:b?.includes('sand')?10:b?.includes('leaves')?30:b?.includes('log')?54:b==='minecraft:grass_block'?6:b?.includes('snow')?34:b?.includes('dirt')?42:b?46:0;
+for(let z=0;z<128;z++)for(let x=0;x<128;x++){const top=t.top(p.xCenter+(x-64)*4+2,p.zCenter+(z-64)*4+2);colors.push(color(top?.block));if(top)known++;}
+mkdirSync('outpost-map-stage',{recursive:true});writeFileSync(`outpost-map-stage/${p.mapId}.dat`,encode({data:compound({scale:byte(2),dimension:str('minecraft:overworld'),trackingPosition:byte(1),unlimitedTracking:byte(1),locked:byte(0),xCenter:int(p.xCenter),zCenter:int(p.zCenter),colors:bytes(colors),banners:list(10,[]),frames:list(10,[])}),DataVersion:int(dataVersion)}));
+writeFileSync('outpost-map-stage/last_id.dat',encode({data:compound({map:int(p.mapId)}),DataVersion:int(dataVersion)}));
+const plan=JSON.parse(readFileSync('journeys.local.json'));plan.finale=p;writeFileSync('outpost-plan.local.json',JSON.stringify(plan,null,2));writeFileSync('outpost-map-stage/manifest.json',JSON.stringify({previousMapId,mapId:p.mapId,knownPixels:known,requires:'Verify last_id unchanged with server cleanly stopped before installation; rescue selection pending'},null,2));console.log(JSON.stringify({finale:p,previousMapId,knownPixels:known}));

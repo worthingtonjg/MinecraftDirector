@@ -1,0 +1,4 @@
+import {gzipSync} from 'node:zlib';
+export const tag=(type,value)=>({type,value});
+export const byte=v=>tag(1,v),int=v=>tag(3,v),str=v=>tag(8,v),bytes=v=>tag(7,v),list=(type,items)=>tag(9,{type,items}),compound=v=>tag(10,v);
+export function encode(root){const parts=[];const put=b=>parts.push(b),u8=v=>put(Buffer.from([v&255])),i32=v=>{const b=Buffer.alloc(4);b.writeInt32BE(v);put(b);},s=v=>{const b=Buffer.from(v),n=Buffer.alloc(2);n.writeUInt16BE(b.length);put(n);put(b);};function val(t,v){switch(t){case 1:u8(v);break;case 3:i32(v);break;case 7:i32(v.length);put(Buffer.from(v));break;case 8:s(v);break;case 9:u8(v.type);i32(v.items.length);for(const x of v.items)val(v.type,x);break;case 10:for(const [k,x]of Object.entries(v)){u8(x.type);s(k);val(x.type,x.value);}u8(0);break;default:throw Error('Unsupported output NBT');}}u8(10);s('');val(10,root);return gzipSync(Buffer.concat(parts));}

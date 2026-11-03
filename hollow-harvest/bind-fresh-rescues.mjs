@@ -1,0 +1,5 @@
+import {readFileSync,writeFileSync,mkdirSync,copyFileSync} from 'node:fs';import {rescuePack} from './rescue.mjs';
+const observed=JSON.parse(readFileSync('golem-inspection.local.json')),plan=JSON.parse(readFileSync('journeys.local.json'));
+const uuid=a=>{const h=a.map(v=>(v>>>0).toString(16).padStart(8,'0')).join('');return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;};
+const records=plan.finale.rescues.map(r=>{const [x,y,z,X,Y,Z]=r.bounds,candidates=observed.filter(e=>e.Health>0&&e.DeathTime===0&&e.Pos[0]>=x&&e.Pos[0]<=X+1&&e.Pos[1]>=y&&e.Pos[1]<=Y+1&&e.Pos[2]>=z&&e.Pos[2]<=Z+1);if(candidates.length!==1)throw Error('Need exactly one living captive within cage '+r.bounds);return {uuid:uuid(candidates[0].UUID),bounds:r.bounds};});
+plan.finale.rescues=records;writeFileSync('journeys.local.json',JSON.stringify(plan,null,2));const root='server-26.3/hollow-harvest-opening/datapacks/hh_rescue/';for(const [f,data]of Object.entries(rescuePack(records))){mkdirSync(root+f.slice(0,f.lastIndexOf('/')+1),{recursive:true});writeFileSync(root+f,data);}console.log(JSON.stringify(records));
